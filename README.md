@@ -1,8 +1,8 @@
-# CS186 Database Management System
+# Database Management System
 
 ## Overview
 
-This project implements a complete relational database management system (DBMS) as part of UC Berkeley's CS186 course. The system includes all core database components from storage management to query optimization, concurrency control, and crash recovery.
+This project implements a complete relational database management system (DBMS). The system includes all core database components from storage management to query optimization, concurrency control, and crash recovery.
 
 ## Project Architecture
 
@@ -180,7 +180,7 @@ The implementation includes comprehensive testing for:
 
 - **Java 8+**: Core language requirements
 - **JUnit**: Testing framework
-- **Berkeley CS186 Framework**: Course-specific components
+- **(University) CS___ Framework**: Course-specific components
 
 ---
 
