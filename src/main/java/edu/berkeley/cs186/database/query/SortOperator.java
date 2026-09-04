@@ -87,7 +87,17 @@ public class SortOperator extends QueryOperator {
      */
     public Run sortRun(Iterator<Record> records) {
         // TODO(proj3_part1): implement
-        return null;
+        Run r = new Run(this.transaction, this.getSchema());
+        ArrayList<Record> ar = new ArrayList<Record>();
+        while (records.hasNext()){
+            ar.add(records.next());
+        }
+        ar.sort(comparator);
+        // ar.sort(hashCode());
+        for (int i = 0; i < ar.size(); i++){
+            r.add(ar.get(i));
+        }
+        return r;
     }
 
     /**
@@ -108,7 +118,27 @@ public class SortOperator extends QueryOperator {
     public Run mergeSortedRuns(List<Run> runs) {
         assert (runs.size() <= this.numBuffers - 1);
         // TODO(proj3_part1): implement
-        return null;
+        ArrayList<Record> output = new ArrayList<Record>();
+        ArrayList<Iterator<Record>> iter_list = new ArrayList<Iterator<Record>>();
+        PriorityQueue<Pair<Record, Integer>> pq = new PriorityQueue<>(new RecordPairComparator());
+        for (int i = 0; i < runs.size(); i++){
+            iter_list.add(runs.get(i).iterator());
+        }
+        for (int i = 0; i < runs.size(); i++){
+            Iterator<Record> iter_i = iter_list.get(i);
+            Record r_i = iter_i.next();
+            Pair<Record, Integer> p = new Pair<Record, Integer>(r_i, i);
+            pq.add(p);
+        }
+        while (!pq.isEmpty()){
+            Pair<Record, Integer> p1 = pq.poll();
+            output.add(p1.getFirst());
+            Iterator<Record> iter_i = iter_list.get(p1.getSecond());
+            if (iter_i.hasNext()) {
+                pq.add(new Pair<Record, Integer>(iter_i.next(), p1.getSecond()));
+            }
+        }
+        return makeRun(output);
     }
 
     /**
@@ -133,7 +163,25 @@ public class SortOperator extends QueryOperator {
      */
     public List<Run> mergePass(List<Run> runs) {
         // TODO(proj3_part1): implement
-        return Collections.emptyList();
+        ArrayList<Run> output_runs = new ArrayList<Run>();
+        int n = runs.size() / (numBuffers - 1);
+        for (int i = 0; i < n; i++){
+            if (i != n-1) {
+                ArrayList<Run> local_runs = new ArrayList<Run>();
+                for (int j = 0; j < (numBuffers - 1); j++) {
+                    local_runs.add(runs.get((i * (numBuffers - 1)) + j));
+                }
+                output_runs.add(mergeSortedRuns(local_runs));
+            } else {
+                ArrayList<Run> local_runs = new ArrayList<Run>();
+                for (int k = i * (numBuffers - 1); k < runs.size(); k++){
+                    local_runs.add(runs.get(k));
+                }
+                output_runs.add(mergeSortedRuns(local_runs));
+            }
+        }
+        return output_runs;
+        // return Collections.emptyList();
     }
 
     /**
@@ -149,7 +197,31 @@ public class SortOperator extends QueryOperator {
         Iterator<Record> sourceIterator = getSource().iterator();
 
         // TODO(proj3_part1): implement
-        return makeRun(); // TODO(proj3_part1): replace this!
+        BacktrackingIterator<Record> b = getBlockIterator(sourceIterator, getSchema(), numBuffers);
+        ArrayList<Run> output =  new ArrayList<Run>();
+        // B pages per Run
+        while (b.hasNext()){
+            ArrayList<Record> local = new ArrayList<Record>();
+            while (b.hasNext()){
+                local.add(b.next());
+            }
+            output.add(sortRun(local.iterator()));
+        }
+//        while (sourceIterator.hasNext()){
+//            ArrayList<Record> local = new ArrayList<Record>();
+//            while (sourceIterator.hasNext() && local.size() < numBuffers){
+//                local.add(sourceIterator.next());
+//            }
+//            output.add(sortRun(makeRun(local).iterator()));
+//        }
+        while (output.size() > 1){
+            output = (ArrayList<Run>) mergePass(output);
+        }
+        if (output.size() == 1){
+            return output.get(0);
+        }
+        return makeRun();
+        // return makeRun(); // TODO(proj3_part1): replace this!
     }
 
     /**
@@ -169,4 +241,3 @@ public class SortOperator extends QueryOperator {
         return run;
     }
 }
-

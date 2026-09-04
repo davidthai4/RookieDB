@@ -40,7 +40,7 @@ public class BNLJOperator extends JoinOperator {
         int numLeftPages = getLeftSource().estimateStats().getNumPages();
         int numRightPages = getRightSource().estimateIOCost();
         return ((int) Math.ceil((double) numLeftPages / (double) usableBuffers)) * numRightPages +
-               getLeftSource().estimateIOCost();
+                getLeftSource().estimateIOCost();
     }
 
     /**
@@ -88,6 +88,10 @@ public class BNLJOperator extends JoinOperator {
          */
         private void fetchNextLeftBlock() {
             // TODO(proj3_part1): implement
+            this.leftBlockIterator = getBlockIterator(this.leftSourceIterator, getLeftSource().getSchema(), numBuffers - 2);
+            this.leftBlockIterator.markNext();
+            if (leftBlockIterator.hasNext()) leftRecord = leftBlockIterator.next();
+
         }
 
         /**
@@ -103,6 +107,8 @@ public class BNLJOperator extends JoinOperator {
          */
         private void fetchNextRightPage() {
             // TODO(proj3_part1): implement
+            this.rightPageIterator = getBlockIterator(this.rightSourceIterator, getRightSource().getSchema(), 1);
+            this.rightPageIterator.markNext();
         }
 
         /**
@@ -115,7 +121,31 @@ public class BNLJOperator extends JoinOperator {
          */
         private Record fetchNextRecord() {
             // TODO(proj3_part1): implement
-            return null;
+            // constructor already calls fetchNextLeftBlock and fetchNextRightPage
+            if (leftRecord == null){
+                return null;
+            }
+            while (true){
+                if (this.rightPageIterator.hasNext()){ // Case 1: right iterator yields value
+                    Record nextRecord = rightPageIterator.next();
+                    if (compare(leftRecord, nextRecord) == 0){
+                        return leftRecord.concat(nextRecord);
+                    }
+                } else if (this.leftBlockIterator.hasNext()){ // Case 2: left block iterator yields value
+                    this.leftRecord = leftBlockIterator.next();
+                    this.rightPageIterator.reset();
+                } else if (this.rightSourceIterator.hasNext()){
+                    this.leftBlockIterator.reset();
+                    this.leftRecord = leftBlockIterator.next();
+                    fetchNextRightPage();
+                } else if (this.leftSourceIterator.hasNext()){
+                    fetchNextLeftBlock();
+                    this.rightSourceIterator.reset();
+                    fetchNextRightPage();
+                } else {
+                    return null;
+                }
+            }
         }
 
         /**

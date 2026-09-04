@@ -20,8 +20,8 @@ public class SortMergeOperator extends JoinOperator {
                              String rightColumnName,
                              TransactionContext transaction) {
         super(prepareLeft(transaction, leftSource, leftColumnName),
-              prepareRight(transaction, rightSource, rightColumnName),
-              leftColumnName, rightColumnName, transaction, JoinType.SORTMERGE);
+                prepareRight(transaction, rightSource, rightColumnName),
+                leftColumnName, rightColumnName, transaction, JoinType.SORTMERGE);
         this.stats = this.estimateStats();
     }
 
@@ -87,10 +87,10 @@ public class SortMergeOperator extends JoinOperator {
      */
     private class SortMergeIterator implements Iterator<Record> {
         /**
-        * Some member variables are provided for guidance, but there are many possible solutions.
-        * You should implement the solution that's best for you, using any member variables you need.
-        * You're free to use these member variables, but you're not obligated to.
-        */
+         * Some member variables are provided for guidance, but there are many possible solutions.
+         * You should implement the solution that's best for you, using any member variables you need.
+         * You're free to use these member variables, but you're not obligated to.
+         */
         private Iterator<Record> leftIterator;
         private BacktrackingIterator<Record> rightIterator;
         private Record leftRecord;
@@ -140,7 +140,104 @@ public class SortMergeOperator extends JoinOperator {
          */
         private Record fetchNextRecord() {
             // TODO(proj3_part1): implement
+            // R and S sorted??? then iterate through r and s, reference video : https://www.youtube.com/watch?v=jiWCPJtDE2c
+            // while (leftRecord != null || rightIterator != null ) {
+                // if (!marked) {
+//                    while (compare(leftRecord, rightRecord) != 0){
+//                        if (compare(leftRecord, rightRecord) > 0){
+//                            if (rightIterator.hasNext()) {
+//                                rightRecord = rightIterator.next();
+//                            } else {
+//                                break;
+//                            }
+//                        } else {
+//                            if (leftIterator.hasNext()) {
+//                                leftRecord = leftIterator.next();
+//                            } else {
+//                                break;
+//                            }
+//                        }
+//                    }
+//                    while (compare(leftRecord, rightRecord) < 0) {
+//                        rightRecord = rightIterator.next();
+//                    }
+//                    while (compare(leftRecord, rightRecord) > 0) {
+//                        leftRecord = leftIterator.next();
+//                    }
+//                    rightIterator.markNext();
+//                    marked = true;
+//                }
+//                if (compare(leftRecord, rightRecord) == 0 || rightIterator.hasNext()) {
+//                    Record res = leftRecord.concat(rightRecord);
+//                    if (rightIterator.hasNext()) {
+//                        rightRecord = rightIterator.next();
+//                    }
+//                    return res;
+//                } else {
+//                    rightIterator.reset();
+//                    rightRecord = rightIterator.next();
+//                    if (leftIterator.hasNext()) {
+//                        leftRecord = leftIterator.next();
+//                    } else {
+//                        break;
+//                    }
+//                    marked = false;
+//                }
+//            }
+//            return null;
+
+            // checking rightIterator rather than rightRecord because the
+            // record could be null and then reset back to mark to have a value
+            if (rightIterator == null) {
+                return null;
+            }
+            while (leftRecord != null) {
+                if (!marked) {
+                    while (leftRecord != null && rightRecord != null && compare(leftRecord, rightRecord) != 0) {
+                        int advance = compare(leftRecord, rightRecord);
+                        if (advance < 0) {
+                            if (leftIterator.hasNext()) {
+                                leftRecord = leftIterator.next();
+                            } else {
+                                leftRecord = null;
+                            }
+                        } else {
+                            if (rightIterator.hasNext()) {
+                                rightRecord = rightIterator.next();
+                            } else {
+                                rightRecord = null;
+                            }
+                        }
+                    }
+                    rightIterator.markPrev();
+                    marked = true;
+                }
+                if (this.leftRecord != null && this.rightRecord != null && compare(leftRecord, rightRecord) == 0) {
+                    Record rec = leftRecord.concat(rightRecord);
+                    nextRecord = rec;
+                    if (rightIterator.hasNext()) {
+                        rightRecord = rightIterator.next();
+                    } else {
+                        rightRecord = null;
+                    }
+                    return rec;
+                } else {
+                    rightIterator.reset();
+                    if (rightIterator.hasNext()) {
+                        rightRecord = rightIterator.next();
+                    } else {
+                        rightRecord = null;
+                    }
+                    if (leftIterator.hasNext()) {
+                        leftRecord = leftIterator.next();
+                    } else {
+                        leftRecord = null;
+                    }
+                    marked = false;
+                }
+            }
             return null;
+
         }
 
         @Override
